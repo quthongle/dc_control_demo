@@ -73,13 +73,18 @@ Module
 	#define PWM_FAST 255 // arbitrary fast speed PWM duty cycle
 	#define DIR_DELAY 1000 // brief delay for abrupt motor changes
 	unsigned long segment = 2000;
+	unsigned long repeatUnit = 5;
+	unsigned long unit4segment = segment / repeatUnit;
+
 	unsigned long repeat = 5;
 	unsigned long runLength = segment * repeat;
 
+	unsigned long countStep = 0;
 
 void setup()
 	{
 	Serial.begin( 9600 );
+	Serial.println( "....Start SETUP..." );
 	irrecv.enableIRIn(); // start the IR receiver
 	pinMode( MOTOR_B_DIR, OUTPUT );
 	pinMode( MOTOR_B_PWM, OUTPUT );
@@ -100,6 +105,7 @@ void setup()
 	pinMode( MOTOR_B_PWM3, OUTPUT );
 	digitalWrite( MOTOR_B_DIR3, LOW );
 	digitalWrite( MOTOR_B_PWM3, LOW );
+	Serial.println( "....Ends SETUP..." );
 	}
 
 
@@ -166,8 +172,6 @@ void dcStop(){
 void practice(){
 	Serial.println( "-----------------------------" );
 	Serial.println( "practice mode..." );
-	unsigned long startTime = millis();
-	unsigned long currTime;
 	unsigned long count = 0;
 	while (count < repeat){
 		Serial.println(count);
@@ -180,6 +184,42 @@ void practice(){
 	dcStop();
 	Serial.println( "-----------------------------" );
 	Serial.println( "Exit practice mode..." );
+}
+
+void manUp(){
+	Serial.println( "-----------------------------" );
+	Serial.println( "stepUp..." );
+	if (countStep < repeatUnit){
+		Serial.println(countStep);
+		dcRun();
+		delay(unit4segment);
+		countStep++;
+	} else if (countStep >= repeatUnit){
+			dcRunReverse();
+			delay(segment);
+			countStep = 0;
+	}
+	dcStop();
+	Serial.println( "-----------------------------" );
+	Serial.println( "Exit stepUp..." );
+}
+
+void manDown(){
+	Serial.println( "-----------------------------" );
+	Serial.println( "stepDown..." );
+	if (countStep > 0 ){
+		Serial.println(countStep);
+		dcRunReverse();
+		delay(unit4segment);
+		countStep--;
+	} else if (countStep < 0 ) {
+			dcRun();
+			delay(segment);
+			countStep = repeatUnit - 1;
+		}
+	dcStop();
+	Serial.println( "-----------------------------" );
+	Serial.println( "Exit stepDown..." );
 }
 
 int getIR(){
@@ -230,6 +270,12 @@ int getIR(){
 			case 0xFF6897: Serial.println ("----im getting 0-----");
 			ret =  0;
 				break;
+			case 0xFF22DD: Serial.println ("----im getting PRE-----");
+			ret =  10;
+				break;
+			case 0xFF02FD: Serial.println ("----im getting NXT-----");
+			ret =  11;
+				break;
 			default:  Serial.println ("--INVALID SIG---");
 			ret =  -1;
 				break;
@@ -244,7 +290,7 @@ void loop()
 	{
 	boolean isValidInput;
 	// draw a menu on the serial port
-	Serial.println( "-----------------------------" );
+	/*Serial.println( "-----------------------------" );
 	Serial.println( "MENU:" );
 	Serial.println( "1) Fast forward" );
 	Serial.println( "2) Forward" );
@@ -253,7 +299,9 @@ void loop()
 	Serial.println( "5) Fast reverse" );
 	Serial.println( "6) Hard stop (brake)" );
 	Serial.println( "7) practice mode" );
-	Serial.println( "-----------------------------" );
+	Serial.println( "pre) Down" );
+	Serial.println( "nxt) Up" );
+	Serial.println( "-----------------------------" );*/
 	do
 	{
 	int c;
@@ -315,6 +363,15 @@ void loop()
 
 		case 7: // 7) practice mode
 			practice();
+			isValidInput = true;
+			break;
+
+		case 10: // 7) practice mode
+			manDown();
+			isValidInput = true;
+			break;
+		case 11: // 7) practice mode
+			manUp();
 			isValidInput = true;
 			break;
 		default:
